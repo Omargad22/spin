@@ -884,7 +884,7 @@ class _SpinWheelScreenState extends State<SpinWheelScreen>
   void initState() {
     super.initState();
     _controller = AnimationController(
-      duration: const Duration(seconds: 5),
+      duration: const Duration(seconds: 10),
       vsync: this,
     );
     _animation = Tween<double>(
@@ -998,7 +998,7 @@ class _SpinWheelScreenState extends State<SpinWheelScreen>
                             size: Size(wheelSize, wheelSize),
                             painter: WheelPainter(
                               dishes: widget.challenges,
-                              rotation: _animation.value * 4 * 3.14159,
+                              rotation: _animation.value * 15 * 3.14159,
                             ),
                           ),
                         );
