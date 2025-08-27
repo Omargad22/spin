@@ -161,24 +161,67 @@ class ConfettiPainter extends CustomPainter {
 class PointerPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
+    // Enhanced pointer with gradient and glow effects
+    final gradient = LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: [
+        Colors.white,
+        Colors.grey.shade100,
+        Colors.grey.shade200,
+      ],
+      stops: const [0.0, 0.6, 1.0],
+    );
+    
     final paint = Paint()
-      ..color = Colors.white
+      ..shader = gradient.createShader(Rect.fromLTWH(0, 0, size.width, size.height))
+      ..style = PaintingStyle.fill;
+    
+    // Draw glow effect behind pointer
+    final glowPaint = Paint()
+      ..color = Colors.white.withOpacity(0.4)
       ..style = PaintingStyle.fill
-      ..strokeWidth = 2;
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
     
-    final borderPaint = Paint()
-      ..color = Colors.black.withOpacity(0.3)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-    
+    // Enhanced pointer shape with rounded edges
     final path = Path();
     path.moveTo(size.width / 2, size.height); // Bottom center
-    path.lineTo(0, 0); // Top left
-    path.lineTo(size.width, 0); // Top right
+    path.quadraticBezierTo(size.width * 0.3, size.height * 0.7, 0, size.height * 0.2); // Left curve
+    path.quadraticBezierTo(size.width * 0.2, 0, size.width / 2, 0); // Top left curve
+    path.quadraticBezierTo(size.width * 0.8, 0, size.width, size.height * 0.2); // Top right curve
+    path.quadraticBezierTo(size.width * 0.7, size.height * 0.7, size.width / 2, size.height); // Right curve
     path.close();
     
+    // Draw glow
+    canvas.drawPath(path, glowPaint);
+    
+    // Draw main pointer
     canvas.drawPath(path, paint);
+    
+    // Enhanced border with multiple layers
+    final borderPaint = Paint()
+      ..color = Colors.black.withOpacity(0.4)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.5;
+    
+    final innerBorderPaint = Paint()
+      ..color = Colors.white.withOpacity(0.8)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    
     canvas.drawPath(path, borderPaint);
+    canvas.drawPath(path, innerBorderPaint);
+    
+    // Add small highlight at the tip
+    final highlightPaint = Paint()
+      ..color = Colors.white.withOpacity(0.9)
+      ..style = PaintingStyle.fill;
+    
+    canvas.drawCircle(
+      Offset(size.width / 2, size.height * 0.1),
+      2,
+      highlightPaint,
+    );
   }
   
   @override
@@ -200,48 +243,85 @@ class WheelPainter extends CustomPainter {
     final radius = size.width / 2;
     final segmentAngle = 2 * pi / dishes.length;
 
-    // Colors for segments
-    final colors = [
-      const Color(0xFF8B5CF6),
-      const Color(0xFF06B6D4),
-      const Color(0xFF10B981),
-      const Color(0xFFF59E0B),
-      const Color(0xFFEF4444),
-      const Color(0xFFEC4899),
+    // Enhanced gradient colors for segments
+    final gradientColors = [
+      [const Color(0xFF8B5CF6), const Color(0xFF6366F1)], // Purple gradient
+      [const Color(0xFF06B6D4), const Color(0xFF0891B2)], // Cyan gradient
+      [const Color(0xFF10B981), const Color(0xFF059669)], // Green gradient
+      [const Color(0xFFF59E0B), const Color(0xFFD97706)], // Amber gradient
+      [const Color(0xFFEF4444), const Color(0xFFDC2626)], // Red gradient
+      [const Color(0xFFEC4899), const Color(0xFFDB2777)], // Pink gradient
+      [const Color(0xFF8B5CF6), const Color(0xFFEC4899)], // Purple to Pink
+      [const Color(0xFF06B6D4), const Color(0xFF10B981)], // Cyan to Green
     ];
+
+    // Draw outer glow effect
+    final glowPaint = Paint()
+      ..color = Colors.white.withOpacity(0.1)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 8
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+    
+    canvas.drawCircle(center, radius + 4, glowPaint);
 
     for (int i = 0; i < dishes.length; i++) {
       final startAngle = i * segmentAngle + rotation;
       final sweepAngle = segmentAngle;
+      final colorPair = gradientColors[i % gradientColors.length];
       
-      // Draw segment
+      // Create gradient for each segment
+      final rect = Rect.fromCircle(center: center, radius: radius);
+      final gradient = RadialGradient(
+        center: Alignment.center,
+        radius: 1.0,
+        colors: [
+          colorPair[0].withOpacity(0.9),
+          colorPair[1].withOpacity(0.7),
+          colorPair[1].withOpacity(0.9),
+        ],
+        stops: const [0.0, 0.7, 1.0],
+      );
+      
+      // Draw segment with gradient
       final paint = Paint()
-        ..color = colors[i % colors.length]
+        ..shader = gradient.createShader(rect)
         ..style = PaintingStyle.fill;
       
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        startAngle,
-        sweepAngle,
-        true,
-        paint,
-      );
+      canvas.drawArc(rect, startAngle, sweepAngle, true, paint);
       
-      // Draw segment border
+      // Draw inner shadow effect
+      final shadowPaint = Paint()
+        ..color = Colors.black.withOpacity(0.2)
+        ..style = PaintingStyle.fill;
+      
+      final shadowRect = Rect.fromCircle(center: center, radius: radius * 0.95);
+      canvas.drawArc(shadowRect, startAngle, sweepAngle, true, shadowPaint);
+      
+      // Draw segment with main gradient again (layered effect)
+      final mainPaint = Paint()
+        ..shader = gradient.createShader(shadowRect)
+        ..style = PaintingStyle.fill;
+      
+      canvas.drawArc(shadowRect, startAngle, sweepAngle, true, mainPaint);
+      
+      // Draw enhanced segment border with glow
       final borderPaint = Paint()
+        ..color = Colors.white.withOpacity(0.6)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 3
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1);
+      
+      canvas.drawArc(rect, startAngle, sweepAngle, true, borderPaint);
+      
+      // Draw thin inner border
+      final innerBorderPaint = Paint()
         ..color = Colors.white.withOpacity(0.3)
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 2;
+        ..strokeWidth = 1;
       
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        startAngle,
-        sweepAngle,
-        true,
-        borderPaint,
-      );
+      canvas.drawArc(rect, startAngle, sweepAngle, true, innerBorderPaint);
       
-      // Draw text
+      // Draw text with enhanced styling
       final textAngle = startAngle + sweepAngle / 2;
       final textRadius = radius * 0.7;
       final textX = center.dx + cos(textAngle) * textRadius;
@@ -251,18 +331,30 @@ class WheelPainter extends CustomPainter {
       canvas.translate(textX, textY);
       canvas.rotate(textAngle + pi / 2);
       
+      // Enhanced text with multiple shadows for depth
       final textPainter = TextPainter(
         text: TextSpan(
           text: dishes[i],
           style: const TextStyle(
             color: Colors.white,
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
             shadows: [
+              Shadow(
+                offset: Offset(0, 2),
+                blurRadius: 4,
+                color: Colors.black87,
+              ),
               Shadow(
                 offset: Offset(1, 1),
                 blurRadius: 2,
                 color: Colors.black54,
+              ),
+              Shadow(
+                offset: Offset(-1, -1),
+                blurRadius: 1,
+                color: Colors.white24,
               ),
             ],
           ),
@@ -277,18 +369,55 @@ class WheelPainter extends CustomPainter {
       canvas.restore();
     }
     
-    // Draw center circle
+    // Draw enhanced center circle with gradient
+    final centerRadius = radius * 0.18;
+    final centerGradient = RadialGradient(
+      colors: [
+        Colors.white,
+        Colors.grey.shade100,
+        Colors.grey.shade200,
+      ],
+      stops: const [0.0, 0.7, 1.0],
+    );
+    
     final centerPaint = Paint()
-      ..color = Colors.white
+      ..shader = centerGradient.createShader(
+        Rect.fromCircle(center: center, radius: centerRadius),
+      )
       ..style = PaintingStyle.fill;
     
-    canvas.drawCircle(center, radius * 0.15, centerPaint);
+    // Draw center shadow
+    final centerShadowPaint = Paint()
+      ..color = Colors.black.withOpacity(0.3)
+      ..style = PaintingStyle.fill
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
     
-    // Draw center icon
+    canvas.drawCircle(center, centerRadius + 2, centerShadowPaint);
+    canvas.drawCircle(center, centerRadius, centerPaint);
+    
+    // Draw center border with glow
+    final centerBorderPaint = Paint()
+      ..color = Colors.white.withOpacity(0.8)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1);
+    
+    canvas.drawCircle(center, centerRadius, centerBorderPaint);
+    
+    // Draw enhanced center icon with shadow
     final iconPainter = TextPainter(
       text: const TextSpan(
         text: '🍽️',
-        style: TextStyle(fontSize: 24),
+        style: TextStyle(
+          fontSize: 28,
+          shadows: [
+            Shadow(
+              offset: Offset(1, 1),
+              blurRadius: 2,
+              color: Colors.black26,
+            ),
+          ],
+        ),
       ),
       textDirection: TextDirection.ltr,
     );
@@ -879,6 +1008,7 @@ class _SpinWheelScreenState extends State<SpinWheelScreen>
   bool _isSpinning = false;
   bool _showConfetti = false;
   final Random _random = Random();
+  double _rotationMultiplier = 15.0; // Default rotation multiplier
 
   @override
   void initState() {
@@ -907,9 +1037,24 @@ class _SpinWheelScreenState extends State<SpinWheelScreen>
 
     HapticFeedback.mediumImpact();
 
+    // Generate random rotation multiplier between 15 and 35
+    _rotationMultiplier = 15 + _random.nextDouble() * 20; // 15 to 35
+
     _controller.reset();
     _controller.forward().then((_) {
-      final selectedIndex = _random.nextInt(widget.challenges.length);
+      // Calculate which segment is at the top of the wheel when it stops
+      final finalRotation = _animation.value * _rotationMultiplier * 3.14159;
+      final segmentAngle = 2 * pi / widget.challenges.length;
+      
+      // Normalize the rotation to 0-2π range
+      final normalizedRotation = finalRotation % (2 * pi);
+      
+      // Calculate which segment is at the top (12 o'clock position)
+      // Segments start at 0 radians (3 o'clock), so top is at -π/2 from start
+      // We need to find which segment covers the top position (-π/2 or 3π/2)
+      final topPosition = (3 * pi / 2 - normalizedRotation) % (2 * pi);
+      final selectedIndex = (topPosition / segmentAngle).floor() % widget.challenges.length;
+      
       setState(() {
         _selectedChallenge = widget.challenges[selectedIndex];
         _isSpinning = false;
@@ -987,10 +1132,26 @@ class _SpinWheelScreenState extends State<SpinWheelScreen>
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
                             boxShadow: [
+                              // Main shadow
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
-                                blurRadius: 20,
-                                offset: const Offset(0, 10),
+                                color: Colors.black.withOpacity(0.4),
+                                blurRadius: 25,
+                                offset: const Offset(0, 12),
+                                spreadRadius: 2,
+                              ),
+                              // Secondary shadow for depth
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 40,
+                                offset: const Offset(0, 20),
+                                spreadRadius: 5,
+                              ),
+                              // Subtle inner glow
+                              BoxShadow(
+                                color: Colors.white.withOpacity(0.1),
+                                blurRadius: 15,
+                                offset: const Offset(0, -5),
+                                spreadRadius: -2,
                               ),
                             ],
                           ),
@@ -998,7 +1159,7 @@ class _SpinWheelScreenState extends State<SpinWheelScreen>
                             size: Size(wheelSize, wheelSize),
                             painter: WheelPainter(
                               dishes: widget.challenges,
-                              rotation: _animation.value * 15 * 3.14159,
+                              rotation: _animation.value * _rotationMultiplier * 3.14159,
                             ),
                           ),
                         );
